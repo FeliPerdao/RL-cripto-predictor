@@ -3,9 +3,15 @@ from stable_baselines3.common.env_util import make_vec_env
 from env.candle_env import CandlePredictionEnv
 
 def train_agent(data, model_path, predict_steps=3):
-    env = CandlePredictionEnv(data, predict_steps=predict_steps)
+    # División 80/20
+    train_df = data.iloc[:int(len(data) * 0.8)].copy()
+    test_df = data.iloc[int(len(data) * 0.8):].copy()
+
+    # Entorno y vectorización
+    env = CandlePredictionEnv(train_df, predict_steps=predict_steps)
     vec_env = make_vec_env(lambda: env, n_envs=1)
 
+    # Configuración y entrenamiento del modelo
     model = PPO(
         "MlpPolicy",
         vec_env,
@@ -19,3 +25,6 @@ def train_agent(data, model_path, predict_steps=3):
 
     model.learn(total_timesteps=100_000)
     model.save(model_path)
+
+    # Devolver datos de test
+    return test_df

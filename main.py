@@ -4,8 +4,9 @@ import pandas as pd
 import sys
 import logging
 from scripts.download_data import download_binance_ohlcv
-from models.agent import train_agent
+from scripts.agent import train_agent
 from scripts.predict import predict
+from scripts.backtest import backtest
 
 # Configurar logging
 os.makedirs("logs", exist_ok=True)
@@ -26,6 +27,7 @@ TIMEFRAMES = ["1m", "3m", "5m", "15m", "1h", "1d"]
 logging.info("=== INICIANDO PROCESO DE ENTRENAMIENTO Y PREDICCIÓN ===")
 
 dataframes = {}
+test_dataframes = {}
 
 # Paso 1: Descargar datos si no existen
 for tf in TIMEFRAMES:
@@ -43,7 +45,7 @@ for tf in TIMEFRAMES:
     df = df.drop(columns=["timestamp"], errors="ignore")
     df["close"] = df["close"].astype(float)
     df["return"] = df["close"].pct_change().fillna(0)
-    df = df[["close", "return"]]  # ahora también guardamos "close"
+    df = df[["close", "return"]]  # también guardamos "close"
     dataframes[tf] = df
     logging.info(f"📈 Datos procesados para {tf}")
 
@@ -52,9 +54,13 @@ for tf in TIMEFRAMES:
     model_path = f"models/ppo_predictor_{tf}"
     if os.path.exists(f"{model_path}.zip"):
         logging.info(f"🧠 Modelo ya existe para {tf}, salteando entrenamiento.")
+        # Si ya existe, usamos el 20% final como test
+        test_len = int(len(dataframes[tf]) * 0.2)
+        test_dataframes[tf] = dataframes[tf].iloc[-test_len:].copy()
     else:
         logging.info(f"🧠 Entrenando modelo para {tf}...")
-        train_agent(dataframes[tf], model_path)
+        test_df = train_agent(dataframes[tf], model_path)
+        test_dataframes[tf] = test_df
         logging.info(f"✅ Modelo entrenado para {tf}")
 
 # Paso 4: Predecir las próximas 3 velas
@@ -62,3 +68,10 @@ for tf in TIMEFRAMES:
     model_path = f"models/ppo_predictor_{tf}"
     logging.info(f"\n🔮 Prediciendo próximas 3 velas (variación y precios) para {tf}:")
     predict(dataframes[tf], model_path, steps=3)
+
+# Paso 5: Evaluar modelo con backtesting aleatorio (solo con test_df)
+for tf in TIMEFRAMES:
+    model_path = f"models/ppo_predictor_{tf}"
+    logging.info(f"\n📊 Backtest de modelo para {tf} (usando 20% test)...")
+    avg_error, _ = backtest(test_dataframes[tf], model_path, steps=3, n_tests=100)
+    logging.info(f"🔁 Error cuadrático medio promedio para {tf}: {avg_error:.6f}")
