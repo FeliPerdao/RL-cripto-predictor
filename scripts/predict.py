@@ -3,8 +3,13 @@ from stable_baselines3 import PPO
 from env.candle_env import CandlePredictionEnv
 from stable_baselines3.common.env_util import make_vec_env
 
+
 def predict(data, model_path, steps=3, return_only=False):
     data = data.copy().reset_index(drop=True)
+    data["return"] = data["close"].pct_change().fillna(0)
+    data["volume_norm"] = data["volume"] / data["volume"].rolling(10).mean()
+    data["volume_norm"] = data["volume_norm"].fillna(1)
+
     last_close_prices = data["close"].iloc[-10:].values
 
     env = CandlePredictionEnv(data, predict_steps=steps)
@@ -16,10 +21,9 @@ def predict(data, model_path, steps=3, return_only=False):
     action, _ = model.predict(obs, deterministic=True)
 
     if return_only:
-        return action  # ⬅️ Esto permite usar la función silenciosamente
+        return action
 
-    # Modo consola normal
-    print("📈 Últimos 3 precios de cierre reales:")
+    print("\n📈 Últimos 3 precios de cierre reales:")
     for i, price in enumerate(last_close_prices[-3:]):
         print(f"   Vela -{3 - i}: ${price:.8f}")
 

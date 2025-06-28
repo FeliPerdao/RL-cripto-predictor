@@ -47,8 +47,9 @@ for tf in TIMEFRAMES:
     df = pd.read_csv(file_path)
     df = df.drop(columns=["timestamp"], errors="ignore")
     df["close"] = df["close"].astype(float)
-    df["return"] = df["close"].pct_change().fillna(0)
-    df = df[["close", "return"]]  # también guardamos "close"
+    df["return"] = df["close"].pct_change().fillna(0) 
+    df["volume"] = df["volume"].astype(float)
+    df = df[["close", "return", "volume"]]  # columnas enviadas al agent
     dataframes[tf] = df
     logging.info(f"📈 Datos procesados para {tf}")
 
@@ -73,8 +74,8 @@ for tf in TIMEFRAMES:
     predict(dataframes[tf], model_path, steps=3)
 
 # Paso 5: Evaluar modelo con backtesting aleatorio (solo con test_df)
-for tf in TIMEFRAMES:
+""" for tf in TIMEFRAMES:
     model_path = f"models/ppo_predictor_{tf}"
     logging.info(f"\n📊 Backtest de modelo para {tf} (usando 20% test)...")
     avg_error, _ = backtest(test_dataframes[tf], model_path, steps=3, n_tests=100)
-    logging.info(f"🔁 Error cuadrático medio promedio para {tf}: {avg_error:.6f}")
+    logging.info(f"🔁 Error cuadrático medio promedio para {tf}: {avg_error:.6f}") """

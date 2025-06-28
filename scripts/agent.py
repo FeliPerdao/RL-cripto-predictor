@@ -2,7 +2,15 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from env.candle_env import CandlePredictionEnv
 
+
 def train_agent(data, model_path, predict_steps=3):
+    # Preprocesamiento: asegurarse de que 'return' y 'volume' estén listos
+    data = data.copy()
+    print("🔍 Columnas recibidas:", data.columns.tolist())
+
+    data["return"] = data["close"].pct_change().fillna(0)
+    data["volume"] = data["volume"].fillna(0)
+
     # División 80/20
     train_df = data.iloc[:int(len(data) * 0.8)].copy()
     test_df = data.iloc[int(len(data) * 0.8):].copy()

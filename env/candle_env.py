@@ -8,16 +8,16 @@ class CandlePredictionEnv(gym.Env):
         self.predict_steps = predict_steps
         self.position = 10
 
-        # Observación: últimas 10 variaciones %
+        # Observación: últimas 10 variaciones % + volumenes normalizados
         self.observation_space = gym.spaces.Box(
-            low=-1, high=1, shape=(10,), dtype=np.float32
+            low=-1, high=1, shape=(20,), dtype=np.float32
         )
 
         # Acción: predicción de próximas N velas (%), continua
         self.action_space = gym.spaces.Box(
             low=-1, high=1, shape=(self.predict_steps,), dtype=np.float32
         )
-        
+
     def seed(self, seed=None):
         self.np_random, seed = gym.utils.seeding.np_random(seed)
         return [seed]
@@ -27,7 +27,11 @@ class CandlePredictionEnv(gym.Env):
         return self._get_obs()
 
     def _get_obs(self):
-        obs = self.data.iloc[self.position - 10:self.position]["return"].values.astype("float32")
+        recent_data = self.data.iloc[self.position - 10:self.position].copy()
+        pct_returns = recent_data["return"].values.astype("float32")
+        volume = recent_data["volume"].values.astype("float32")
+        norm_volume = (volume - volume.mean()) / (volume.std() + 1e-6)
+        obs = np.concatenate([pct_returns, norm_volume]).astype("float32")
         return obs
 
     def step(self, action):
@@ -36,7 +40,7 @@ class CandlePredictionEnv(gym.Env):
 
         # Error cuadrático inverso como recompensa
         mse = np.mean((action - future_returns) ** 2)
-        reward = -mse  # cuanto menor el error, mayor la recompensa
+        reward = -mse
 
         self.position += 1
         done = self.position + self.predict_steps >= len(self.data)
