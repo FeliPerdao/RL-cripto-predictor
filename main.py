@@ -7,6 +7,8 @@ from scripts.download_data import download_binance_ohlcv
 from scripts.agent import train_agent
 from scripts.predict import predict
 from scripts.backtest import backtest
+from scripts.update_data import update_binance_ohlcv
+
 
 # Configurar logging
 os.makedirs("logs", exist_ok=True)
@@ -29,14 +31,15 @@ logging.info("=== INICIANDO PROCESO DE ENTRENAMIENTO Y PREDICCIÓN ===")
 dataframes = {}
 test_dataframes = {}
 
-# Paso 1: Descargar datos si no existen
+# Paso 1: Descargar datos si no existen y actualizar si existen
 for tf in TIMEFRAMES:
     file_path = f"data/historical_data/PEPEUSDT_{tf}.csv"
     if not os.path.exists(file_path):
         logging.info(f"🔽 Descargando velas {tf}...")
         download_binance_ohlcv("PEPE/USDT", tf)
     else:
-        logging.info(f"✅ Archivo existente para {tf}, usando datos locales.")
+        logging.info(f"🔄 Archivo existente para {tf}, actualizando...")
+        update_binance_ohlcv("PEPE/USDT", tf)
 
 # Paso 2: Calcular variaciones porcentuales y guardar los dataframes
 for tf in TIMEFRAMES:

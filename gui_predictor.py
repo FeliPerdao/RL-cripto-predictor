@@ -6,6 +6,13 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from datetime import datetime, timedelta
 from scripts.predict import predict
 import os
+from scripts.update_data import update_binance_ohlcv
+
+# ================== ACTUALIZACIÓN DE DATOS ==================
+TIMEFRAMES = ["1m", "3m", "5m", "15m", "1h", "1d"]
+for tf in TIMEFRAMES:
+    update_binance_ohlcv("PEPE/USDT", tf)
+
 
 # ====================== CARGA DE DATOS ======================
 df_1m = pd.read_csv("data/historical_data/PEPEUSDT_1m.csv")
@@ -33,10 +40,12 @@ def update_plot():
     start_time = end_time - timedelta(minutes=window_minutes)
 
     data = df_1m[(df_1m["timestamp"] >= start_time) & (df_1m["timestamp"] <= end_time)].copy()
+    data["timestamp_local"] = data["timestamp"] - timedelta(hours=3)
+
 
     fig.clear()
     ax = fig.add_subplot(111)
-    ax.plot(data["timestamp"], data["close"], label="Precio real", color="black")
+    ax.plot(data["timestamp_local"], data["close"], label="Precio real", color="black")
 
     if step_index <= 0:
         # Obtener último precio antes del punto actual
@@ -50,6 +59,7 @@ def update_plot():
         # === Predicción 1m ===
         future_times_1m = [end_time + timedelta(minutes=i + 1) for i in range(3)]
         prices_1m = [last_close * (1 + r) for r in pred_1m]
+        future_times_1m = [t - timedelta(hours=3) for t in future_times_1m]
         ax.plot(future_times_1m, prices_1m, label="Predicción 1m", marker="o", linestyle="--", color="blue")
 
         # === Predicción 3m === (cada valor se repite 3 veces)
@@ -60,12 +70,14 @@ def update_plot():
                 future_times_3m.append(end_time + timedelta(minutes=i * 3 + j + 1))
                 prices_3m.append(last_close * (1 + r))
 
+        future_times_3m = [t - timedelta(hours=3) for t in future_times_3m]
         ax.plot(future_times_3m, prices_3m, label="Predicción 3m", marker="x", linestyle=":", color="orange")
 
         # === Agregar velas reales posteriores (si estamos en el pasado) ===
         real_future = df_1m[(df_1m["timestamp"] > end_time) & (df_1m["timestamp"] <= end_time + timedelta(minutes=9))]
         if not real_future.empty:
-            ax.plot(real_future["timestamp"], real_future["close"], label="Real futuro", color="green", linewidth=2, alpha=0.6)
+            real_future["timestamp_local"] = real_future["timestamp"] - timedelta(hours=3)
+            ax.plot(real_future["timestamp_local"], real_future["close"], label="Real futuro", color="green", linewidth=2, alpha=0.6)
 
     ax.set_title(f"Precio PEPEUSDT hasta {end_time.strftime('%Y-%m-%d %H:%M')}")
     ax.legend()
