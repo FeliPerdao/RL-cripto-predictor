@@ -4,14 +4,13 @@ from env.candle_env import CandlePredictionEnv
 
 
 def train_agent(data, model_path, predict_steps=3):
-    # Preprocesamiento: asegurarse de que 'return' y 'volume' estén listos
+    # Preprocessing: prepare 'return' and 'volume' columns to be sent agent
     data = data.copy()
-    print("🔍 Columnas recibidas:", data.columns.tolist())
 
-    data["return"] = data["close"].pct_change().fillna(0)
-    data["volume"] = data["volume"].fillna(0)
+    data["return"] = data["close"].pct_change().fillna(0) #% variation related to anterior candle
+    data["volume"] = data["volume"].fillna(0) #volume as is
 
-    # División 80/20
+    # 80/20 - rain/Test division (First 80% train - Last 20% backtest)
     train_df = data.iloc[:int(len(data) * 0.8)].copy()
     test_df = data.iloc[int(len(data) * 0.8):].copy()
 

@@ -73,8 +73,8 @@ for tf in TIMEFRAMES:
     predict(dataframes[tf], model_path, steps=3)
 
 # Paso 5: Evaluar modelo con backtesting aleatorio (solo con test_df)
-""" for tf in TIMEFRAMES:
+for tf in TIMEFRAMES:
     model_path = f"models/ppo_predictor_{tf}"
     logging.info(f"\n📊 Backtest de modelo para {tf} (usando 20% test)...")
     avg_error, _ = backtest(test_dataframes[tf], model_path, steps=3, n_tests=100)
-    logging.info(f"🔁 Error cuadrático medio promedio para {tf}: {avg_error:.6f}") """
+    logging.info(f"🔁 Error cuadrático medio promedio para {tf}: {avg_error:.6f}")

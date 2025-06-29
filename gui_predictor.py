@@ -17,8 +17,13 @@ for tf in TIMEFRAMES:
 # ====================== CARGA DE DATOS ======================
 df_1m = pd.read_csv("data/historical_data/PEPEUSDT_1m.csv")
 df_3m = pd.read_csv("data/historical_data/PEPEUSDT_3m.csv")
-df_1m["timestamp"] = pd.to_datetime(df_1m["timestamp"])
-df_3m["timestamp"] = pd.to_datetime(df_3m["timestamp"])
+df_5m = pd.read_csv("data/historical_data/PEPEUSDT_5m.csv")
+df_15m = pd.read_csv("data/historical_data/PEPEUSDT_15m.csv")
+df_1h = pd.read_csv("data/historical_data/PEPEUSDT_1h.csv")
+df_1d = pd.read_csv("data/historical_data/PEPEUSDT_1d.csv")
+
+for df in [df_1m, df_3m, df_5m, df_15m, df_1h, df_1d]:
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
 
 # ===================== VARIABLES GLOBALES ====================
 step_index = 0  # 0 es ahora, -1 es 1 min antes, +1 es 1 min después
@@ -26,7 +31,7 @@ step_index = 0  # 0 es ahora, -1 es 1 min antes, +1 es 1 min después
 # ===================== FUNCION DE PREDICCION ==================
 def get_predictions(df, model_path):
     df = df.copy()
-    df["return"] = df["close"].pct_change().fillna(0)  # ⬅️ línea crucial
+    df["return"] = df["close"].pct_change().fillna(0) 
     pred_returns = predict(df, model_path, return_only=True)
     return pred_returns
 
@@ -53,28 +58,27 @@ def update_plot():
         last_close = last_10["close"].values[-1]
 
         # Cargar predicciones
-        pred_1m = get_predictions(df_1m[df_1m["timestamp"] <= end_time], "models/ppo_predictor_1m")
-        pred_3m = get_predictions(df_3m[df_3m["timestamp"] <= end_time], "models/ppo_predictor_3m")
+        preds = {
+            "1m": (get_predictions(df_1m[df_1m["timestamp"] <= end_time], "models/ppo_predictor_1m"), 1, "blue", "o", "--"),
+            "3m": (get_predictions(df_3m[df_3m["timestamp"] <= end_time], "models/ppo_predictor_3m"), 3, "orange", "x", ":"),
+            "5m": (get_predictions(df_5m[df_5m["timestamp"] <= end_time], "models/ppo_predictor_5m"), 5, "red", "^", "-"),
+            "15m": (get_predictions(df_15m[df_15m["timestamp"] <= end_time], "models/ppo_predictor_15m"), 15, "purple", "s", "-"),
+            "1h": (get_predictions(df_1h[df_1h["timestamp"] <= end_time], "models/ppo_predictor_1h"), 60, "green", "d", "-"),
+            "1d": (get_predictions(df_1d[df_1d["timestamp"] <= end_time], "models/ppo_predictor_1d"), 1440git, "brown", "P", "-"),
+        }
+        
+        for label, (preds_arr, interval, color, marker, linestyle) in preds.items():
+            future_times = []
+            prices = []
+            for i, r in enumerate(preds_arr):
+                rep = 1 if label == "1d" else interval
+                for j in range(rep):
+                    future_times.append(end_time + timedelta(minutes=i * interval + j + 1))
+                    prices.append(last_close * (1 + r))
+            future_times = [t - timedelta(hours=3) for t in future_times]
+            ax.plot(future_times, prices, label=f"Predicción {label}", marker=marker, linestyle=linestyle, color=color)
 
-        # === Predicción 1m ===
-        future_times_1m = [end_time + timedelta(minutes=i + 1) for i in range(3)]
-        prices_1m = [last_close * (1 + r) for r in pred_1m]
-        future_times_1m = [t - timedelta(hours=3) for t in future_times_1m]
-        ax.plot(future_times_1m, prices_1m, label="Predicción 1m", marker="o", linestyle="--", color="blue")
-
-        # === Predicción 3m === (cada valor se repite 3 veces)
-        future_times_3m = []
-        prices_3m = []
-        for i, r in enumerate(pred_3m):
-            for j in range(3):
-                future_times_3m.append(end_time + timedelta(minutes=i * 3 + j + 1))
-                prices_3m.append(last_close * (1 + r))
-
-        future_times_3m = [t - timedelta(hours=3) for t in future_times_3m]
-        ax.plot(future_times_3m, prices_3m, label="Predicción 3m", marker="x", linestyle=":", color="orange")
-
-        # === Agregar velas reales posteriores (si estamos en el pasado) ===
-        real_future = df_1m[(df_1m["timestamp"] > end_time) & (df_1m["timestamp"] <= end_time + timedelta(minutes=9))]
+        real_future = df_1m[(df_1m["timestamp"] > end_time) & (df_1m["timestamp"] <= end_time + timedelta(minutes=90))]
         if not real_future.empty:
             real_future["timestamp_local"] = real_future["timestamp"] - timedelta(hours=3)
             ax.plot(real_future["timestamp_local"], real_future["close"], label="Real futuro", color="green", linewidth=2, alpha=0.6)
@@ -90,8 +94,7 @@ def update_plot():
 def move(minutes):
     global step_index
     step_index += minutes
-    # no dejamos ir hacia futuro más allá del último timestamp
-    max_future = 0
+    max_future = 0 # no dejamos ir hacia futuro más allá del último timestamp
     if step_index > max_future:
         step_index = max_future
     update_plot()

@@ -22,9 +22,12 @@ class CandlePredictionEnv(gym.Env):
         self.np_random, seed = gym.utils.seeding.np_random(seed)
         return [seed]
 
-    def reset(self):
+    def reset(self, *, seed=None, options=None):
+        super().reset(seed=seed)
         self.position = 10
-        return self._get_obs()
+        obs = self._get_obs()
+        return obs, {} 
+
 
     def _get_obs(self):
         recent_data = self.data.iloc[self.position - 10:self.position].copy()
@@ -45,4 +48,7 @@ class CandlePredictionEnv(gym.Env):
         self.position += 1
         done = self.position + self.predict_steps >= len(self.data)
 
-        return self._get_obs(), reward, done, {}
+        terminated = done
+        truncated = False
+
+        return self._get_obs(), reward, terminated, truncated, {}
