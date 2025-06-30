@@ -9,7 +9,7 @@ import os
 from scripts.update_data import update_binance_ohlcv
 
 # ================== ACTUALIZACIÓN DE DATOS ==================
-TIMEFRAMES = ["1m", "3m", "5m", "15m", "1h", "1d"]
+TIMEFRAMES = ["1m", "3m", "5m", "15m", "1h"] #, "1d"
 for tf in TIMEFRAMES:
     update_binance_ohlcv("PEPE/USDT", tf)
 
@@ -22,7 +22,7 @@ df_15m = pd.read_csv("data/historical_data/PEPEUSDT_15m.csv")
 df_1h = pd.read_csv("data/historical_data/PEPEUSDT_1h.csv")
 df_1d = pd.read_csv("data/historical_data/PEPEUSDT_1d.csv")
 
-for df in [df_1m, df_3m, df_5m, df_15m, df_1h, df_1d]:
+for df in [df_1m, df_3m, df_5m, df_15m, df_1h]: #, df_1d
     df["timestamp"] = pd.to_datetime(df["timestamp"])
 
 # ===================== VARIABLES GLOBALES ====================
@@ -62,9 +62,9 @@ def update_plot():
             "1m": (get_predictions(df_1m[df_1m["timestamp"] <= end_time], "models/ppo_predictor_1m"), 1, "blue", "o", "--"),
             "3m": (get_predictions(df_3m[df_3m["timestamp"] <= end_time], "models/ppo_predictor_3m"), 3, "orange", "x", ":"),
             "5m": (get_predictions(df_5m[df_5m["timestamp"] <= end_time], "models/ppo_predictor_5m"), 5, "red", "^", "-"),
-            "15m": (get_predictions(df_15m[df_15m["timestamp"] <= end_time], "models/ppo_predictor_15m"), 15, "purple", "s", "-"),
-            "1h": (get_predictions(df_1h[df_1h["timestamp"] <= end_time], "models/ppo_predictor_1h"), 60, "green", "d", "-"),
-            "1d": (get_predictions(df_1d[df_1d["timestamp"] <= end_time], "models/ppo_predictor_1d"), 1440git, "brown", "P", "-"),
+            "15m": (get_predictions(df_15m[df_15m["timestamp"] <= end_time], "models/ppo_predictor_15m"), 10, "purple", "s", "-"),
+            "1h": (get_predictions(df_1h[df_1h["timestamp"] <= end_time], "models/ppo_predictor_1h"), 20, "green", "d", "-"),
+            #"1d": (get_predictions(df_1d[df_1d["timestamp"] <= end_time], "models/ppo_predictor_1d"), 1440, "brown", "P", "-"),
         }
         
         for label, (preds_arr, interval, color, marker, linestyle) in preds.items():
@@ -99,29 +99,14 @@ def move(minutes):
         step_index = max_future
     update_plot()
 
-def go_back():
-    move(-1)
-
-def go_forward():
-    move(1)
-
-def back_30min():
-    move(-30)
-
-def forward_30min():
-    move(30)
-
-def back_1h():
-    move(-60)
-
-def forward_1h():
-    move(60)
-
-def back_1d():
-    move(-1440)
-
-def forward_1d():
-    move(1440)
+def go_back(): move(-1)
+def go_forward(): move(1)
+def back_30min(): move(-30)
+def forward_30min(): move(30)
+def back_1h(): move(-60)
+def forward_1h(): move(60)
+def back_1d(): move(-1440)
+def forward_1d(): move(1440)
 # ===================== GUI =====================
 root = tk.Tk()
 root.title("Predicciones PEPEUSDT")
