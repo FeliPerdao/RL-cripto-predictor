@@ -25,8 +25,15 @@ def train_agent(data, model_path, predict_steps=3):
     train_df = data.iloc[:split_index].copy()
     test_df = data.iloc[split_index:].copy()
 
-    # Entorno y vectorización
-    env = CandlePredictionEnv(train_df, predict_steps=predict_steps)
+    # ===== Aplico el entorno para que genere features y limpio los NaNs ====
+    tmp_env = CandlePredictionEnv(train_df, predict_steps=predict_steps)
+    processed_df = tmp_env.data.dropna().reset_index(drop=True)
+
+    # 🚨 Verificación explícita: nada de NaNs permitidos
+    assert not processed_df.isnull().values.any(), "Data contiene NaNs antes de entrenar"
+
+    # ===== Entreno sobre el df limpio y procesado ====
+    env = CandlePredictionEnv(processed_df, predict_steps=predict_steps)
     vec_env = make_vec_env(lambda: env, n_envs=1)
 
     # Configuración y entrenamiento del modelo

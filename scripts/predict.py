@@ -20,7 +20,9 @@ def predict(data, model_path, steps=3, return_only=False):
     model = PPO.load(model_path)
 
     # Posición justo antes de la predicción
-    env.position = len(data) - 10
+    env.position = len(env.data) - 10  # Usar el dato procesado real
+    assert env.position >= 10, "📉 No hay suficientes datos para hacer una predicción"
+
     obs = env._get_obs()
     action, _ = model.predict(obs, deterministic=True)  # acción = retornos predichos
 

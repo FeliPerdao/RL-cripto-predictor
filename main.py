@@ -8,7 +8,6 @@ from scripts.predict import predict
 from scripts.backtest import backtest
 from scripts.update_data import update_binance_ohlcv
 
-
 # Configurar logging
 os.makedirs("logs", exist_ok=True)
 logging.basicConfig(
@@ -40,15 +39,14 @@ for tf in TIMEFRAMES:
         logging.info(f"🔄 Archivo existente para {tf}, actualizando...")
         update_binance_ohlcv("PEPE/USDT", tf)
 
-# Paso 2: Calcular variaciones porcentuales y guardar los dataframes
+# Paso 2: Cargar y preparar data
 for tf in TIMEFRAMES:
     file_path = f"data/historical_data/PEPEUSDT_{tf}.csv"
     df = pd.read_csv(file_path)
     df = df.drop(columns=["timestamp"], errors="ignore")
     df["close"] = df["close"].astype(float)
-    df["return"] = df["close"].pct_change().fillna(0) 
     df["volume"] = df["volume"].astype(float)
-    df = df[["close", "return", "volume"]]  # columnas enviadas al agent
+    df = df[["close", "volume"]]
     dataframes[tf] = df
     logging.info(f"📈 Datos procesados para {tf}")
 
@@ -57,7 +55,6 @@ for tf in TIMEFRAMES:
     model_path = f"models/ppo_predictor_{tf}"
     if os.path.exists(f"{model_path}.zip"):
         logging.info(f"🧠 Modelo ya existe para {tf}, salteando entrenamiento.")
-        # Si ya existe, usamos el 20% final como test
         test_len = int(len(dataframes[tf]) * 0.2)
         test_dataframes[tf] = dataframes[tf].iloc[-test_len:].copy()
     else:
