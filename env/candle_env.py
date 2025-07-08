@@ -7,7 +7,7 @@ from ta.volatility import BollingerBands
 from sklearn.preprocessing import StandardScaler
 
 class CandlePredictionEnv(gym.Env):
-    def __init__(self, data, predict_steps=3):
+    def __init__(self, data, predict_steps=3, selected_features=None):
         super(CandlePredictionEnv, self).__init__()
 
         # Observación: 10 últimas filas de features seleccionadas
@@ -17,6 +17,18 @@ class CandlePredictionEnv(gym.Env):
             "boll_upper", "boll_lower",
             "d_price", "dd_price", "volume_change"
         ]
+        self.all_feature_cols = [
+            "return", "volume", "rsi", "ema_9", "ema_21",
+            "macd", "macd_signal", "macd_diff",
+            "boll_upper", "boll_lower",
+            "d_price", "dd_price", "volume_change"
+        ]
+        
+        # Select only return feature for dataframes if none is selected
+        self.feature_cols = selected_features if selected_features else ["return"]
+        
+        if not set(self.feature_cols).issubset(set(self.all_feature_cols)):
+            raise ValueError(f"❌ Features inválidas: {set(self.feature_cols) - set(self.all_feature_cols)}")
         
         self.predict_steps =  predict_steps
         self.position = 10
@@ -29,7 +41,6 @@ class CandlePredictionEnv(gym.Env):
             print(self.data[self.data.isnull().any(axis=1)])
             raise ValueError("💣 Aún hay NaNs después de `_add_features()`")
         
-        self.predict_steps = predict_steps
         self.position = max(10, self.data.shape[0] // 2)
 
         # Observación: últimas 10 variaciones % + volumenes normalizados
@@ -79,12 +90,16 @@ class CandlePredictionEnv(gym.Env):
             print("❌ Valores infinitos encontrados antes del escalado:")
             print(bad)
             raise ValueError("🔥 Datos con inf o NaN antes del escalado")
-        
+
         # 🔥 Normalizamos sólo las columnas de features
         scaler = StandardScaler()
         df[self.feature_cols] = scaler.fit_transform(df[self.feature_cols])
     
         assert not df.isnull().values.any(), "NaNs después del escalado"
+        
+        # 🔥 Normalizamos solo las columnas seleccionadas
+        scaler = StandardScaler()
+        df[self.feature_cols] = scaler.fit_transform(df[self.feature_cols])
 
         return df
 
