@@ -7,6 +7,8 @@ from scripts.agent import train_agent
 from scripts.predict import predict
 from scripts.backtest import backtest
 from scripts.update_data import update_binance_ohlcv
+from scripts.evaluate_agent import evaluate_agent
+from scripts.evaluate_agent_direction import evaluate_agent_direction
 
 
 # Configurar logging
@@ -72,9 +74,39 @@ for tf in TIMEFRAMES:
     logging.info(f"\n🔮 Prediciendo próximas 3 velas (variación y precios) para {tf}:")
     predict(dataframes[tf], model_path, steps=3)
 
-# Paso 5: Evaluar modelo con backtesting aleatorio (solo con test_df)
+# Paso 5: Evaluar modelo con backtesting aleatorio de todo y de los úultimos 20%
 for tf in TIMEFRAMES:
     model_path = f"models/ppo_predictor_{tf}"
-    logging.info(f"\n📊 Backtest de modelo para {tf} (usando 20% test)...")
-    avg_error, _ = backtest(test_dataframes[tf], model_path, steps=3, n_tests=100)
-    logging.info(f"🔁 Error cuadrático medio promedio para {tf}: {avg_error:.6f}")
+    
+    #logging.info(f"\n📊 Backtest completo para {tf} (TODO el dataset)...")
+    avg_all, _ = backtest(dataframes[tf], model_path, steps=3, n_tests=100, test_split_only=False)
+    logging.info(f"🔁 MSE promedio (todo el dataset) para {tf}: {avg_all:.6f}")
+
+    #logging.info(f"\n📊 Backtest parcial para {tf} (sólo 20% final)...")
+    avg_last, _ = backtest(dataframes[tf], model_path, steps=3, n_tests=100, test_split_only=True)
+    logging.info(f"🔁 MSE promedio (último 20%) para {tf}: {avg_last:.6f}\n")
+
+""" # Paso 6: Evaluación visual con gráfico + reward acumulado
+reward_matrix = []
+for tf in TIMEFRAMES:
+    model_path = f"models/ppo_predictor_{tf}"
+    reward_df = evaluate_agent(model_path, dataframes[tf], predict_steps=3, tf_name=tf)
+    reward_matrix.append(reward_df)
+
+# Unir todo en un DataFrame
+final_rewards_df = pd.concat(reward_matrix)
+print("\n📊 Tabla de Rewards acumulados por timeframe y vela:")
+print(final_rewards_df) """
+
+# Paso 7: Evaluar si el modelo acierta la dirección de las velas futuras
+direction_reward_df = pd.DataFrame()
+
+for tf in TIMEFRAMES:
+    model_path = f"models/ppo_predictor_{tf}"
+    logging.info(f"\n🎯 Evaluando dirección correcta para {tf}...")
+    direction_df = evaluate_agent_direction(model_path, dataframes[tf], predict_steps=3, tf_name=tf)
+    direction_reward_df = pd.concat([direction_reward_df, direction_df])
+
+# Guardar resultados
+direction_reward_df.to_csv("results/direction_rewards.csv")
+logging.info("\n📁 Rewards por dirección guardados en results/direction_rewards.csv")
