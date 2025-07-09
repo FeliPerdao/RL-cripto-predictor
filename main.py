@@ -10,9 +10,13 @@ from scripts.update_data import update_binance_ohlcv
 from scripts.evaluate_agent import evaluate_agent
 from scripts.evaluate_agent_direction import evaluate_agent_direction
 
+# Preguntar si se deben mostrar gráficos
+show_graphs = input("¿Mostrar gráficos en pasos 6 y 7? (s/n): ").strip().lower() == 's'
 
 # Configurar logging
 os.makedirs("logs", exist_ok=True)
+os.makedirs("results", exist_ok=True)
+
 logging.basicConfig(
     filename="logs/log.txt",
     level=logging.INFO,
@@ -50,9 +54,11 @@ for tf in TIMEFRAMES:
     df["close"] = df["close"].astype(float)
     df["return"] = df["close"].pct_change().fillna(0) 
     df["volume"] = df["volume"].astype(float)
+    df["ema_9"] = df["close"].ewm(span=9).mean()
+    df["ema_21"] = df["close"].ewm(span=21).mean()
     
     # ------ FEATURES TO BE SENT TO THE AGENT -------
-    df = df[["return", "volume"]] 
+    df = df[["return", "volume", "ema_9", "ema_21"]]
     
     dataframes[tf] = df
     logging.info(f"📈 Datos procesados para {tf}")
@@ -89,17 +95,17 @@ for tf in TIMEFRAMES:
     avg_last, _ = backtest(dataframes[tf], model_path, steps=3, n_tests=100, test_split_only=True)
     logging.info(f"🔁 MSE promedio (último 20%) para {tf}: {avg_last:.6f}\n")
 
-""" # Paso 6: Evaluación visual con gráfico + reward acumulado
+# Paso 6: Evaluación visual con gráfico + reward acumulado
 reward_matrix = []
 for tf in TIMEFRAMES:
     model_path = f"models/ppo_predictor_{tf}"
-    reward_df = evaluate_agent(model_path, dataframes[tf], predict_steps=3, tf_name=tf)
+    reward_df = evaluate_agent(model_path, dataframes[tf], predict_steps=3, tf_name=tf, show_plot=show_graphs)
     reward_matrix.append(reward_df)
 
 # Unir todo en un DataFrame
 final_rewards_df = pd.concat(reward_matrix)
 print("\n📊 Tabla de Rewards acumulados por timeframe y vela:")
-print(final_rewards_df) """
+print(final_rewards_df)
 
 # Paso 7: Evaluar si el modelo acierta la dirección de las velas futuras
 direction_reward_df = pd.DataFrame()
@@ -107,7 +113,7 @@ direction_reward_df = pd.DataFrame()
 for tf in TIMEFRAMES:
     model_path = f"models/ppo_predictor_{tf}"
     logging.info(f"\n🎯 Evaluando dirección correcta para {tf}...")
-    direction_df = evaluate_agent_direction(model_path, dataframes[tf], predict_steps=3, tf_name=tf)
+    direction_df = evaluate_agent_direction(model_path, dataframes[tf], predict_steps=3, tf_name=tf, show_plot=show_graphs)
     direction_reward_df = pd.concat([direction_reward_df, direction_df])
 
 # Guardar resultados

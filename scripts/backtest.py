@@ -40,8 +40,10 @@ def backtest(data, model_path, steps=3, n_tests=100, test_split_only=True):
         env.position = pos
         obs = env._get_obs()
         
-        if obs.shape != (20,):
-            continue  # saltar observaciones inválidas
+        # Se adapta a la cantidad de features
+        if obs.shape != env.observation_space.shape:
+            continue
+
 
         action, _ = model.predict(obs, deterministic=True)
         true_returns = data.iloc[pos:pos + steps]["return"].values

@@ -10,7 +10,7 @@ class CandlePredictionEnv(gym.Env):
 
         # Observación: últimas 10 variaciones % + volumenes normalizados
         self.observation_space = gym.spaces.Box(
-            low=-1, high=1, shape=(20,), dtype=np.float32
+            low=-1, high=1, shape=(40,), dtype=np.float32 #40 - retorno + volumenes + ema9 + ema21
         )
 
         # Acción: predicción de próximas N velas (%), continua
@@ -34,7 +34,9 @@ class CandlePredictionEnv(gym.Env):
         pct_returns = recent_data["return"].values.astype("float32")
         volume = recent_data["volume"].values.astype("float32")
         norm_volume = (volume - volume.mean()) / (volume.std() + 1e-6)
-        obs = np.concatenate([pct_returns, norm_volume]).astype("float32")
+        ema_9 = recent_data["ema_9"].values.astype("float32")
+        ema_21 = recent_data["ema_21"].values.astype("float32")
+        obs = np.concatenate([pct_returns, norm_volume, ema_9, ema_21]).astype("float32")
         return obs
 
     def step(self, action):
