@@ -13,8 +13,11 @@ def evaluate_agent(model_path, data, predict_steps=3, tf_name=""):
     Guarda los valores de rewards en un dataframe
     """
     data = data.copy().reset_index(drop=True)
-    data["return"] = data["close"].pct_change().fillna(0)
-    data["volume"] = data["volume"].fillna(0)
+    #data["return"] = data["close"].pct_change().fillna(0)
+    #data["volume"] = data["volume"].fillna(0)
+    # Validar columnas necesarias
+    if "return" not in data.columns or "volume" not in data.columns:
+        raise ValueError("❌ El dataset debe contener columnas 'return' y 'volume'")
 
     test_start = int(len(data) * 0.8)
     test_data = data.iloc[test_start:].reset_index(drop=True)

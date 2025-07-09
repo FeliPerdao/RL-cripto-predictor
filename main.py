@@ -50,7 +50,10 @@ for tf in TIMEFRAMES:
     df["close"] = df["close"].astype(float)
     df["return"] = df["close"].pct_change().fillna(0) 
     df["volume"] = df["volume"].astype(float)
-    df = df[["close", "return", "volume"]]  # columnas enviadas al agent
+    
+    # ------ FEATURES TO BE SENT TO THE AGENT -------
+    df = df[["return", "volume"]] 
+    
     dataframes[tf] = df
     logging.info(f"📈 Datos procesados para {tf}")
 

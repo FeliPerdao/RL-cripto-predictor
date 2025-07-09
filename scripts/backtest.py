@@ -13,9 +13,13 @@ def backtest(data, model_path, steps=3, n_tests=100, test_split_only=True):
     Retorna el MSE promedio y la lista completa de errores.
     """
     # Preprocesamiento: asegurar columnas necesarias
-    data = data.copy().reset_index(drop=True) #data = data.copy()
-    data["return"] = data["close"].pct_change().fillna(0)
-    data["volume"] = data["volume"].fillna(0)
+    data = data.copy().reset_index(drop=True) 
+    #data["return"] = data["close"].pct_change().fillna(0)
+    #data["volume"] = data["volume"].fillna(0)
+    
+    # Validar columnas necesarias
+    if "return" not in data.columns or "volume" not in data.columns:
+        raise ValueError("❌ El dataset debe contener columnas 'return' y 'volume'")
     
     if test_split_only:
         test_start = int(len(data) * 0.8)
