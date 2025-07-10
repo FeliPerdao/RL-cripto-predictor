@@ -31,7 +31,15 @@ step_index = 0  # 0 es ahora, -1 es 1 min antes, +1 es 1 min después
 # ===================== FUNCION DE PREDICCION ==================
 def get_predictions(df, model_path):
     df = df.copy()
-    df["return"] = df["close"].pct_change().fillna(0) 
+    df["close"] = df["close"].astype(float)
+    df["return"] = df["close"].pct_change().fillna(0)
+    df["volume"] = df["volume"].astype(float)
+    df["ema_9"] = df["close"].ewm(span=9).mean()
+    df["ema_21"] = df["close"].ewm(span=21).mean()
+    df["ema_trend_up"] = (df["ema_9"] > df["ema_21"]).astype(int)
+
+    df = df[["return", "volume", "ema_9", "ema_21", "ema_trend_up"]]
+
     pred_returns = predict(df, model_path, return_only=True)
     return pred_returns
 

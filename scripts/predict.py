@@ -6,9 +6,6 @@ from stable_baselines3.common.env_util import make_vec_env
 
 def predict(data, model_path, steps=3, return_only=False):
     data = data.copy().reset_index(drop=True)
-    #data["return"] = data["close"].pct_change().fillna(0)
-    #data["volume_norm"] = data["volume"] / data["volume"].rolling(10).mean()
-    #data["volume_norm"] = data["volume_norm"].fillna(1)
 
     if "return" not in data.columns or "volume" not in data.columns:
         raise ValueError("❌ El dataset debe tener columnas 'return' y 'volume'")
@@ -27,9 +24,9 @@ def predict(data, model_path, steps=3, return_only=False):
         return action
 
     print("\n🔮 Predicción próximas 3 velas (variaciones %):")
-    for i, ret in enumerate(action):
-        direction = "⬆️" if ret > 0.001 else "⬇️" if ret < -0.001 else "➡️"
-        print(f"   Vela +{i+1}: Estimado = {ret:.4%} {direction}")
+    for i, pred_return  in enumerate(action):
+        direction = "⬆️" if pred_return  > 0.001 else "⬇️" if pred_return  < -0.001 else "➡️"
+        print(f"   Vela +{i+1}: Estimado = {pred_return :.4%} {direction}")
     
     """ print("\n📈 Últimos 3 precios de cierre reales:")
     for i, price in enumerate(last_close_prices[-3:]):

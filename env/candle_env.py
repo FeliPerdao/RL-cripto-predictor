@@ -8,12 +8,16 @@ class CandlePredictionEnv(gym.Env):
         self.predict_steps = predict_steps
         self.position = 10
 
-        # Observación: últimas 10 variaciones % + volumenes normalizados
+        # Observación: últimas 10 velas
+        # Determinar dinámicamente cuántas features hay por paso
+        self.feature_columns = list(data.columns)
+        self.window_size = 10
+        self.obs_len = len(self.feature_columns) * self.window_size
+
         self.observation_space = gym.spaces.Box(
-            low=-1, high=1, shape=(40,), dtype=np.float32 #40 - retorno + volumenes + ema9 + ema21
+            low=-np.inf, high=np.inf, shape=(self.obs_len,), dtype=np.float32
         )
 
-        # Acción: predicción de próximas N velas (%), continua
         self.action_space = gym.spaces.Box(
             low=-1, high=1, shape=(self.predict_steps,), dtype=np.float32
         )
@@ -30,13 +34,20 @@ class CandlePredictionEnv(gym.Env):
 
 
     def _get_obs(self):
-        recent_data = self.data.iloc[self.position - 10:self.position].copy()
-        pct_returns = recent_data["return"].values.astype("float32")
-        volume = recent_data["volume"].values.astype("float32")
-        norm_volume = (volume - volume.mean()) / (volume.std() + 1e-6)
-        ema_9 = recent_data["ema_9"].values.astype("float32")
-        ema_21 = recent_data["ema_21"].values.astype("float32")
-        obs = np.concatenate([pct_returns, norm_volume, ema_9, ema_21]).astype("float32")
+        recent_data = self.data.iloc[self.position - self.window_size:self.position]
+        obs_parts = []
+
+        for col in self.feature_columns:
+            series = recent_data[col].values.astype("float32")
+
+            # Normalizar volumen
+            if col == "volume":
+                series = (series - series.mean()) / (series.std() + 1e-6)
+
+            # No tocar ema_trend_up ni otras binarias
+            obs_parts.append(series)
+
+        obs = np.concatenate(obs_parts).astype("float32")
         return obs
 
     def step(self, action):

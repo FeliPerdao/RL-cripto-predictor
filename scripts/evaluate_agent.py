@@ -13,8 +13,7 @@ def evaluate_agent(model_path, data, predict_steps=3, tf_name="", show_plot=Fals
     """
     os.makedirs("results", exist_ok=True)
     data = data.copy().reset_index(drop=True)
-    #data["return"] = data["close"].pct_change().fillna(0)
-    #data["volume"] = data["volume"].fillna(0)
+
     # Validar columnas necesarias
     if "return" not in data.columns or "volume" not in data.columns:
         raise ValueError("❌ El dataset debe contener columnas 'return' y 'volume'")
@@ -52,8 +51,8 @@ def evaluate_agent(model_path, data, predict_steps=3, tf_name="", show_plot=Fals
 
         # Graficar solo las últimas 50 predicciones
         plt.figure(figsize=(14, 6))
-        plt.plot(predictions[-50:], label="Predicción", color="blue")
-        plt.plot(reals[-50:], label="Real", color="green")
+        plt.plot(predictions[:], label="Predicción", color="blue")
+        plt.plot(reals[:], label="Real", color="green")
 
         # Agregar evolución de reward acumulado
         reward_cumsum = np.cumsum(rewards[-50:])

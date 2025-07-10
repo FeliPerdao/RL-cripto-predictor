@@ -13,8 +13,7 @@ def evaluate_agent_direction(model_path, data, predict_steps=3, tf_name="", show
     """
     os.makedirs("results", exist_ok=True)
     data = data.copy().reset_index(drop=True)
-    #data["return"] = data["close"].pct_change().fillna(0)
-    #data["volume"] = data["volume"].fillna(0)
+
     # Validación de columnas necesarias
     if "return" not in data.columns or "volume" not in data.columns:
         raise ValueError("❌ El dataset debe contener columnas 'return' y 'volume'")
@@ -46,6 +45,7 @@ def evaluate_agent_direction(model_path, data, predict_steps=3, tf_name="", show
             real = true_returns[i]
 
             reward = 1 if np.sign(pred) == np.sign(real) else -1
+            #reward = 2 if np.sign(pred) == np.sign(real) else -1 #posible tunning para exloracion
 
             predictions.append(pred)
             reals.append(real)
@@ -70,7 +70,9 @@ def evaluate_agent_direction(model_path, data, predict_steps=3, tf_name="", show
         plt.close()
 
         cumulative_reward = np.sum(rewards)
-        print(f"\n✨ Direcciones acertadas acumuladas (Vela #{i+1}): {cumulative_reward} de {len(rewards)} ({cumulative_reward/len(rewards)})\n")
+        print(f"\n✨ Direcciones acertadas acumuladas (Vela #{i+1}): {cumulative_reward} de {len(rewards)}")
+        accuracy = (cumulative_reward + len(rewards)) / (2 * len(rewards))
+        print(f"📈 Precisión de dirección (Vela #{i+1}): {accuracy:.2%}")
         all_rewards.append(cumulative_reward)
 
     reward_df = pd.DataFrame(

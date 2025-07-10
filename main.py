@@ -56,9 +56,10 @@ for tf in TIMEFRAMES:
     df["volume"] = df["volume"].astype(float)
     df["ema_9"] = df["close"].ewm(span=9).mean()
     df["ema_21"] = df["close"].ewm(span=21).mean()
+    df["ema_trend_up"] = (df["ema_9"] > df["ema_21"]).astype(int) #para más polarización usar df["ema_trend_up"] = np.where(df["ema_9"] > df["ema_21"], 1, -1)
     
     # ------ FEATURES TO BE SENT TO THE AGENT -------
-    df = df[["return", "volume", "ema_9", "ema_21"]]
+    df = df[["return", "volume", "ema_9", "ema_21", "ema_trend_up"]]
     
     dataframes[tf] = df
     logging.info(f"📈 Datos procesados para {tf}")
@@ -102,8 +103,9 @@ for tf in TIMEFRAMES:
     reward_df = evaluate_agent(model_path, dataframes[tf], predict_steps=3, tf_name=tf, show_plot=show_graphs)
     reward_matrix.append(reward_df)
 
-# Unir todo en un DataFrame
+# Unir todo en un DataFrame y guardarlo
 final_rewards_df = pd.concat(reward_matrix)
+final_rewards_df.to_csv("results/rewards.csv")
 print("\n📊 Tabla de Rewards acumulados por timeframe y vela:")
 print(final_rewards_df)
 

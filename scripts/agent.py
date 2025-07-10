@@ -6,14 +6,13 @@ from env.candle_env import CandlePredictionEnv
 def train_agent(data, model_path, predict_steps=3):
     # Preprocessing: prepare 'return' and 'volume' columns to be sent agent
     data = data.copy()
+    required_cols = ["return", "volume"]
 
-    #data["return"] = data["close"].pct_change().fillna(0) #% variation related to anterior candle
-    #data["volume"] = data["volume"].fillna(0) #volume as is
-    # Suponemos que "return" y "volume" ya vienen calculados desde main.py
-    if "return" not in data.columns or "volume" not in data.columns:
-        raise ValueError("❌ El dataset debe contener columnas 'return' y 'volume'")
+    for col in required_cols:
+        if col not in data.columns:
+            raise ValueError(f"❌ Falta la columna requerida: '{col}'")
     
-    # 80/20 - rain/Test division (First 80% train - Last 20% backtest)
+    # 80/20 - train/Test division (First 80% train - Last 20% backtest)
     train_df = data.iloc[:int(len(data) * 0.8)].copy()
     test_df = data.iloc[int(len(data) * 0.8):].copy()
 

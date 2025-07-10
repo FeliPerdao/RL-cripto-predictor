@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 import os
 
-def download_binance_ohlcv(symbol="PEPE/USDT", timeframe="1m", since_days=730):
+def download_binance_ohlcv(symbol="PEPE/USDT", timeframe="1m", since_days=720):
     exchange = ccxt.binance()
     since = exchange.parse8601((datetime.utcnow() - timedelta(days=since_days)).isoformat())
     all_ohlcv = []
