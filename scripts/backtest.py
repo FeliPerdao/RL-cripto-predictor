@@ -4,7 +4,7 @@ from env.candle_env import CandlePredictionEnv
 from stable_baselines3.common.env_util import make_vec_env
 import random
 
-def backtest(data, model_path, steps=3, n_tests=100, test_split_only=True):
+def backtest(data, model_path, steps=1, window_size=10, n_tests=100, test_split_only=True):
     """
     Evalúa el modelo sobre puntos aleatorios:
     - Si test_split_only=True: sólo dentro del 20% final del dataset
@@ -12,10 +12,7 @@ def backtest(data, model_path, steps=3, n_tests=100, test_split_only=True):
 
     Retorna el MSE promedio y la lista completa de errores.
     """
-    # Preprocesamiento: asegurar columnas necesarias
     data = data.copy().reset_index(drop=True) 
-    #data["return"] = data["close"].pct_change().fillna(0)
-    #data["volume"] = data["volume"].fillna(0)
     
     # Validar columnas necesarias
     if "return" not in data.columns or "volume" not in data.columns:
@@ -26,17 +23,17 @@ def backtest(data, model_path, steps=3, n_tests=100, test_split_only=True):
         data = data.iloc[test_start:].reset_index(drop=True)
 
     model = PPO.load(model_path)
-    #total_error = 0
     total_mse = []
 
     # Elegir posiciones aleatorias válidas
-    max_start = len(data) - steps - 10
-    if max_start < 1:
+    max_start = len(data) - steps
+    if max_start <= window_size:
         raise ValueError("⚠️ Muy pocos datos para testear.")
-    positions = random.sample(range(10, max_start), min(n_tests, max_start - 10)) #positions = random.sample(range(10, max_start), n_tests)
+    
+    positions = random.sample(range(window_size, max_start), min(n_tests, max_start - window_size))
 
     for pos in positions:
-        env = CandlePredictionEnv(data, predict_steps=steps) #data, predict_steps=steps)
+        env = CandlePredictionEnv(data, target_step=steps, window_size=window_size) #data, predict_steps=steps)
         env.position = pos
         obs = env._get_obs()
         
@@ -46,10 +43,9 @@ def backtest(data, model_path, steps=3, n_tests=100, test_split_only=True):
 
 
         action, _ = model.predict(obs, deterministic=True)
-        true_returns = data.iloc[pos:pos + steps]["return"].values
+        true_return = data.iloc[pos + steps - 1]["return"]
 
-        mse = np.mean((action - true_returns) ** 2)
-        #total_error += mse
+        mse = np.mean((action - true_return) ** 2)
         total_mse.append(mse)
 
     if not total_mse:

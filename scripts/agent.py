@@ -3,8 +3,7 @@ from stable_baselines3.common.env_util import make_vec_env
 from env.candle_env import CandlePredictionEnv
 
 
-def train_agent(data, model_path, predict_steps=3):
-    # Preprocessing: prepare 'return' and 'volume' columns to be sent agent
+def train_agent(data, model_path, predict_steps=1, window_size=10):
     data = data.copy()
     required_cols = ["return", "volume"]
 
@@ -12,12 +11,12 @@ def train_agent(data, model_path, predict_steps=3):
         if col not in data.columns:
             raise ValueError(f"❌ Falta la columna requerida: '{col}'")
     
-    # 80/20 - train/Test division (First 80% train - Last 20% backtest)
+    # 80/20 - train/test division (First 80% train - Last 20% test)
     train_df = data.iloc[:int(len(data) * 0.8)].copy()
     test_df = data.iloc[int(len(data) * 0.8):].copy()
 
     # Entorno y vectorización
-    env = CandlePredictionEnv(train_df, predict_steps=predict_steps)
+    env = CandlePredictionEnv(train_df, target_step=predict_steps, window_size=window_size)
     vec_env = make_vec_env(lambda: env, n_envs=1)
 
     # Configuración y entrenamiento del modelo

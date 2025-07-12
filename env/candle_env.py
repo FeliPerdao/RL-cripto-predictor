@@ -2,16 +2,16 @@ import gymnasium as gym
 import numpy as np
 
 class CandlePredictionEnv(gym.Env):
-    def __init__(self, data, predict_steps=3):
+    def __init__(self, data, target_step=1, window_size=10): # Hardcoded in 1 for unique candle prediction
         super(CandlePredictionEnv, self).__init__()
         self.data = data.reset_index(drop=True)
-        self.predict_steps = predict_steps
-        self.position = 10
+        self.target_step = target_step - 1  # 0-indexed 
+        self.window_size = window_size
+        self.position = self.window_size
 
-        # Observación: últimas 10 velas
+        # Observación: últimas "window_size" velas
         # Determinar dinámicamente cuántas features hay por paso
         self.feature_columns = list(data.columns)
-        self.window_size = 10
         self.obs_len = len(self.feature_columns) * self.window_size
 
         self.observation_space = gym.spaces.Box(
@@ -19,7 +19,7 @@ class CandlePredictionEnv(gym.Env):
         )
 
         self.action_space = gym.spaces.Box(
-            low=-1, high=1, shape=(self.predict_steps,), dtype=np.float32
+            low=-1, high=1, shape=(1,), dtype=np.float32  # Hardcoded in 1 unique candle prediction
         )
 
     def seed(self, seed=None):
@@ -28,7 +28,7 @@ class CandlePredictionEnv(gym.Env):
 
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
-        self.position = 10
+        self.position = self.window_size
         obs = self._get_obs()
         return obs, {} 
 
@@ -51,17 +51,23 @@ class CandlePredictionEnv(gym.Env):
         return obs
 
     def step(self, action):
-        future_returns = self.data.iloc[self.position:self.position + self.predict_steps]["return"].values
-        action = np.clip(action, -1, 1)
+        future_returns = self.data.iloc[
+            self.position:self.position + self.target_step + 1
+        ]["return"].values
+        
+        action = np.clip(action, -1, 1) # Makes sure there is no outlier with extreme value returned
 
-        # Error cuadrático inverso como recompensa
-        mse = np.mean((action - future_returns) ** 2)
-        reward = -mse
+        # Rewards policy
+        if len(future_returns) <= self.target_step:
+            reward = -999  # Penalty if there isn't the step after the moment in training
+        else:
+            real = future_returns[self.target_step]
+            predicted = action[0]
+            reward = -((predicted - real) ** 2)
 
         self.position += 1
-        done = self.position + self.predict_steps >= len(self.data)
-
-        terminated = done
+        terminated = self.position + self.target_step >= len(self.data)
         truncated = False
 
         return self._get_obs(), reward, terminated, truncated, {}
+
